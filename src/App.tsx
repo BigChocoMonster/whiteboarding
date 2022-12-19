@@ -1,16 +1,21 @@
 import { useState } from "react";
-import "./App.css";
 
 function App() {
   const [selectedColor, setSelectedColor] = useState<string>("#000000");
 
   return (
     <div>
-      <div className="fixed top-2/4 right-0 -translate-y-2/4 rounded-l-xl shadow p-6">
-        <div className="rounded-2xl overflow-hidden">
+      <div className="fixed top-2/4 right-0 -translate-y-2/4 rounded-l-xl shadow p-3">
+        <div className="rounded-full overflow-hidden border border-slate-300">
+          <label
+            htmlFor="pen-color"
+            className="cursor-pointer h-8 w-8 block"
+            style={{ backgroundColor: selectedColor }}
+          />
           <input
+            id="pen-color"
             type="color"
-            className="cursor-pointer"
+            className="hidden"
             value={selectedColor}
             onChange={(event) => {
               setSelectedColor(event.target.value);

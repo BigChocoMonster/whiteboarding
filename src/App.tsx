@@ -6,20 +6,23 @@ import {
   useRef,
   useState,
 } from "react";
+import { useDetectClickOutside } from "react-detect-click-outside";
 
 let cursorPosition: { x: number; y: number };
 
 function App() {
+  const [menu, setMenu] = useState<"color" | null>(null);
+
   const [selectedColor, setSelectedColor] = useState<{
     hue: number;
     saturation: number;
     lightness: number;
-  }>({ hue: 0, saturation: 100, lightness: 50 });
+  }>({ hue: 0, saturation: 1, lightness: 0.5 });
 
   // creating the hue canvas on the right
   useEffect(() => {
     const hueCanvas = document.getElementById("hue") as HTMLCanvasElement;
-    const context = hueCanvas.getContext("2d");
+    const context = hueCanvas?.getContext("2d");
 
     if (context) {
       const gradient = context.createLinearGradient(0, 0, 0, hueCanvas.height);
@@ -31,14 +34,14 @@ function App() {
       context.fillStyle = gradient;
       context.fillRect(0, 0, hueCanvas.width, hueCanvas.height);
     }
-  }, []);
+  }, [menu]);
 
   // creating the spectrum canvas on the left for the selected hue
   useEffect(() => {
     const spectrumCanvas = document.getElementById(
       "spectrum"
     ) as HTMLCanvasElement;
-    const context = spectrumCanvas.getContext("2d");
+    const context = spectrumCanvas?.getContext("2d");
 
     if (context) {
       context.fillStyle = `hsl(${selectedColor.hue}, 100%, 50%)`;
@@ -66,7 +69,7 @@ function App() {
       context.fillStyle = blackGradient;
       context.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
     }
-  }, [selectedColor.hue]);
+  }, [selectedColor.hue, menu]);
 
   const setHue = useCallback(
     (event: MouseEvent<HTMLCanvasElement>, isMouseMove: boolean) => {
@@ -180,22 +183,39 @@ function App() {
     [colorHslString]
   );
 
+  const colorRef = useDetectClickOutside({
+    onTriggered: (event) => {
+      const target = event.target as HTMLElement;
+      if (target.id !== "color-trigger") {
+        setMenu(null);
+      }
+    },
+  });
+
   return (
     <div>
       <div className="fixed top-2/4 right-0 -translate-y-2/4 rounded-l-xl shadow p-3 bg-white">
         <div
-          className="rounded-xl border border-slate-300 cursor-pointer h-8 w-8"
+          id="color-trigger"
+          className="rounded-full border border-slate-300 cursor-pointer h-8 w-8"
           style={{
             backgroundColor: colorHslString,
           }}
-        >
-          <div className="top-0 right-16 absolute rounded shadow p-3 bg-white flex items-center gap-3">
+          onClick={() => {
+            setMenu("color");
+          }}
+        />
+        {menu === "color" ? (
+          <div
+            className="top-0 right-16 absolute rounded shadow p-4 bg-white flex items-center gap-3"
+            ref={colorRef}
+          >
             <div className="relative overflow-hidden">
               <canvas
                 id="spectrum"
                 width={200}
                 height={200}
-                className="rounded"
+                className="rounded cursor-pointer"
                 onMouseMove={(event: MouseEvent<HTMLCanvasElement>) => {
                   setSaturationAndLightness(event, true);
                 }}
@@ -205,7 +225,7 @@ function App() {
               />
               <div
                 id="spectrum-cursor"
-                className="w-6 h-6 absolute top-0 left-0 -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full shadow-2xl border-2 border-white transition-all duration-[10ms]"
+                className="w-6 h-6 absolute top-0 -right-6 -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full shadow-2xl border-2 border-white transition-all duration-[10ms]"
               />
             </div>
             <div className="relative">
@@ -213,7 +233,7 @@ function App() {
                 id="hue"
                 width={10}
                 height={192}
-                className="rounded"
+                className="rounded cursor-pointer"
                 onMouseMove={(event: MouseEvent<HTMLCanvasElement>) => {
                   setHue(event, true);
                 }}
@@ -228,7 +248,7 @@ function App() {
               />
             </div>
           </div>
-        </div>
+        ) : null}
       </div>
       <canvas
         id="board"

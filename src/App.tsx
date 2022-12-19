@@ -8,11 +8,12 @@ import {
 } from "react";
 
 import Color from "./Color";
+import Shape from "./Shape";
 
 let cursorPosition: { x: number; y: number };
 
 function App() {
-  const [menu, setMenu] = useState<"color" | null>(null);
+  const [menu, setMenu] = useState<"color" | "shape" | null>(null);
 
   const [selectedColor, setSelectedColor] = useState<{
     hue: number;
@@ -122,13 +123,22 @@ function App() {
 
   return (
     <div>
-      <div className="fixed top-2/4 right-0 -translate-y-2/4 rounded-l-xl shadow p-3 bg-white">
+      <div className="fixed top-2/4 right-0 -translate-y-2/4 rounded-l-xl shadow p-3 bg-white flex flex-col gap-2">
         <Color
           selectedColor={selectedColor}
           setSelectedColor={setSelectedColor}
           isMenuOpen={menu === "color"}
           openMenu={() => {
             setMenu("color");
+          }}
+          closeMenu={() => {
+            setMenu(null);
+          }}
+        />
+        <Shape
+          isMenuOpen={menu === "shape"}
+          openMenu={() => {
+            setMenu("shape");
           }}
           closeMenu={() => {
             setMenu(null);

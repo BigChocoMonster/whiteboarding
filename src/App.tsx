@@ -1,7 +1,49 @@
-import { useState } from "react";
+import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
+
+let cursorPosition: { x: number; y: number };
 
 function App() {
   const [selectedColor, setSelectedColor] = useState<string>("#000000");
+
+  const contextRef = useRef<CanvasRenderingContext2D>(null);
+
+  useEffect(() => {
+    const canvas = document.getElementById("board") as HTMLCanvasElement;
+    const context = canvas.getContext("2d");
+
+    if (context) {
+      // @ts-ignore
+      contextRef.current = context;
+    }
+  }, [selectedColor]);
+
+  const saveCursorPosition = useCallback(
+    (event: MouseEvent<HTMLCanvasElement>) => {
+      cursorPosition = { x: event.clientX, y: event.clientY };
+    },
+    []
+  );
+
+  const draw = useCallback(
+    (event: MouseEvent<HTMLCanvasElement>) => {
+      if (contextRef.current && event.buttons === 1) {
+        contextRef.current.beginPath();
+
+        contextRef.current.moveTo(cursorPosition.x, cursorPosition.y);
+
+        contextRef.current.lineWidth = 1;
+        contextRef.current.lineCap = "round";
+        contextRef.current.strokeStyle = selectedColor;
+
+        cursorPosition = { x: event.clientX, y: event.clientY };
+
+        contextRef.current.lineTo(cursorPosition.x, cursorPosition.y);
+
+        contextRef.current.stroke();
+      }
+    },
+    [selectedColor]
+  );
 
   return (
     <div>
@@ -23,6 +65,13 @@ function App() {
           />
         </div>
       </div>
+      <canvas
+        id="board"
+        width={window.innerWidth}
+        height={window.innerHeight}
+        onMouseDown={saveCursorPosition}
+        onMouseMove={draw}
+      />
     </div>
   );
 }

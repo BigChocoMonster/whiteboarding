@@ -2,16 +2,14 @@ import { MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useDetectClickOutside } from "react-detect-click-outside";
 
 function Color(props: {
-  isSelected: boolean;
   selectedColor: { hue: number; saturation: number; lightness: number };
   setSelectedColor: React.Dispatch<
     React.SetStateAction<{ hue: number; saturation: number; lightness: number }>
   >;
-  isMenuOpen: boolean;
-  openMenu: () => void;
-  closeMenu: () => void;
 }) {
-  const { isMenuOpen, selectedColor, setSelectedColor } = props;
+  const { selectedColor, setSelectedColor } = props;
+
+  const [isMenuOpen, toggleMenu] = useState<boolean>(false);
 
   // creating the hue canvas on the right
   useEffect(() => {
@@ -144,7 +142,7 @@ function Color(props: {
     onTriggered: (event) => {
       const target = event.target as HTMLElement;
       if (!target.id.endsWith("-trigger")) {
-        props.closeMenu();
+        toggleMenu(false);
       }
     },
   });
@@ -153,24 +151,21 @@ function Color(props: {
     <>
       <div
         id="color-trigger"
-        className={
-          "rounded-full border border-slate-300 cursor-pointer h-8 w-8" +
-          (props.isSelected ? " selected-item" : "")
-        }
+        className="rounded-full border border-slate-300 cursor-pointer h-8 w-8"
         style={{
           backgroundColor: colorHslString,
         }}
         onClick={() => {
-          if (props.isMenuOpen) {
-            props.closeMenu();
+          if (isMenuOpen) {
+            toggleMenu(false);
           } else {
-            props.openMenu();
+            toggleMenu(true);
           }
         }}
       />
       {isMenuOpen ? (
         <div
-          className="top-0 right-16 absolute rounded shadow p-4 bg-white flex items-center gap-3"
+          className="top-0 left-16 absolute rounded shadow p-4 bg-white flex items-center gap-3"
           ref={colorRef}
         >
           <div className="relative overflow-hidden">

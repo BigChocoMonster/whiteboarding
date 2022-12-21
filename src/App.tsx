@@ -8,24 +8,23 @@ import {
 } from "react";
 
 import Color from "./Color";
-import Shape from "./Shape";
+import Rectangle from "./Rectangle";
+import Ellipse from "./Ellipse";
+import Line from "./Line";
 
 let originalCursorPosition: { x: number; y: number };
 let cursorPosition: { x: number; y: number };
 
 function App() {
-  const [selected, setSelected] = useState<"color" | "shape">("shape");
-  const [menu, setMenu] = useState<"color" | "shape" | null>(null);
+  const [selected, setSelected] = useState<
+    "pencil" | "rectangle" | "ellipse" | "line"
+  >("rectangle");
 
   const [selectedColor, setSelectedColor] = useState<{
     hue: number;
     saturation: number;
     lightness: number;
   }>({ hue: 0, saturation: 1, lightness: 0.5 });
-
-  const [selectedShape, setSelectedShape] = useState<
-    "rectangle" | "ellipse" | "line"
-  >("rectangle");
 
   const contextRef = useRef<CanvasRenderingContext2D>(null);
 
@@ -37,7 +36,7 @@ function App() {
       // @ts-ignore
       contextRef.current = context;
     }
-  }, [selected, menu, selectedColor, selectedShape]);
+  }, [selected, selectedColor]);
 
   // saves the moving cursor position
   const saveMovingCursorPosition = useCallback(
@@ -74,7 +73,7 @@ function App() {
    * selected
    */
   const deleteOriginalCursorPosition = useCallback(() => {
-    if (selected === "shape") {
+    if (selected !== "pencil") {
       contextRef.current?.stroke();
 
       const helperTip = document.getElementById("shape-helper");
@@ -118,14 +117,14 @@ function App() {
         contextRef.current.lineWidth = 1;
         contextRef.current.strokeStyle = colorHslString;
 
-        if (selected === "color") {
+        if (selected === "pencil") {
           contextRef.current.lineCap = "round";
 
           contextRef.current.moveTo(cursorPosition.x, cursorPosition.y);
           saveMovingCursorPosition(event);
           contextRef.current.lineTo(cursorPosition.x, cursorPosition.y);
           contextRef.current.stroke();
-        } else if (selected === "shape") {
+        } else {
           saveMovingCursorPosition(event);
 
           // calculating all params
@@ -140,7 +139,7 @@ function App() {
            */
           const helperTip = document.getElementById("shape-helper");
 
-          if (selectedShape === "rectangle") {
+          if (selected === "rectangle") {
             if (helperTip) {
               if (width < 0) {
                 helperTip.style.right = `${window.innerWidth - x}px`;
@@ -167,7 +166,7 @@ function App() {
              * actually drawing, aka, without calling the stroke method
              */
             contextRef.current.rect(x, y, width, height);
-          } else if (selectedShape === "line") {
+          } else if (selected === "line") {
             const angle = Math.atan2(height, width) * (180 / Math.PI);
             const divWidth = Math.sqrt(width * width + height * height); // since we're trying to draw a diagonal
             /**
@@ -193,7 +192,7 @@ function App() {
               originalCursorPosition.y
             );
             contextRef.current.lineTo(cursorPosition.x, cursorPosition.y);
-          } else if (selectedShape === "ellipse") {
+          } else if (selected === "ellipse") {
             if (helperTip) {
               if (width < 0) {
                 helperTip.style.right = `${window.innerWidth - x}px`;
@@ -242,38 +241,41 @@ function App() {
         }
       }
     },
-    [selected, colorHslString, saveMovingCursorPosition, selectedShape]
+    [selected, colorHslString, saveMovingCursorPosition]
   );
 
   return (
-    <div className="select-none">
-      <div className="fixed top-2/4 right-0 -translate-y-2/4 rounded-l-xl shadow p-3 bg-white flex flex-col gap-2">
-        <Color
-          isSelected={selected === "color"}
-          selectedColor={selectedColor}
-          setSelectedColor={setSelectedColor}
-          isMenuOpen={menu === "color"}
-          openMenu={() => {
-            setMenu("color");
-            setSelected("color");
-          }}
-          closeMenu={() => {
-            setMenu(null);
-          }}
-        />
-        <Shape
-          isSelected={selected === "shape"}
-          selectedShape={selectedShape}
-          setSelectedShape={setSelectedShape}
-          isMenuOpen={menu === "shape"}
-          openMenu={() => {
-            setMenu("shape");
-            setSelected("shape");
-          }}
-          closeMenu={() => {
-            setMenu(null);
-          }}
-        />
+    <>
+      <div className="fixed w-fit top-2/4 left-0 -translate-y-2/4 flex flex-col gap-4 select-none">
+        <div className="relative rounded-r-xl shadow p-3 bg-white flex flex-col gap-2">
+          <Color
+            selectedColor={selectedColor}
+            setSelectedColor={setSelectedColor}
+          />
+        </div>
+        <div className="rounded-r-xl shadow p-3 bg-white flex flex-col gap-2">
+          <Rectangle
+            isSelected={selected === "rectangle"}
+            selectionColor={colorHslString}
+            select={() => {
+              setSelected("rectangle");
+            }}
+          />
+          <Ellipse
+            isSelected={selected === "ellipse"}
+            selectionColor={colorHslString}
+            select={() => {
+              setSelected("ellipse");
+            }}
+          />
+          <Line
+            isSelected={selected === "line"}
+            selectionColor={colorHslString}
+            select={() => {
+              setSelected("line");
+            }}
+          />
+        </div>
       </div>
       <canvas
         id="board"
@@ -289,7 +291,7 @@ function App() {
         id="shape-helper"
         onMouseUp={deleteOriginalCursorPosition}
       />
-    </div>
+    </>
   );
 }
 

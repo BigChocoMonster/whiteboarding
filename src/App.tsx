@@ -24,7 +24,7 @@ function App() {
   }>({ hue: 0, saturation: 1, lightness: 0.5 });
 
   const [selectedShape, setSelectedShape] = useState<
-    "rectangle" | "circle" | "line"
+    "rectangle" | "ellipse" | "line"
   >("rectangle");
 
   const contextRef = useRef<CanvasRenderingContext2D>(null);
@@ -84,9 +84,10 @@ function App() {
         helperTip.style.right = "unset";
         helperTip.style.bottom = "unset";
         helperTip.style.left = "unset";
-        helperTip.style.transform = "unset";
         helperTip.style.width = "unset";
         helperTip.style.height = "unset";
+        helperTip.style.transform = "unset";
+        helperTip.style.borderRadius = "unset";
       }
     }
 
@@ -133,12 +134,13 @@ function App() {
           const width = cursorPosition.x - originalCursorPosition.x;
           const height = cursorPosition.y - originalCursorPosition.y;
 
+          /**
+           * we'll set some params to a div, giving user a false info that
+           * the shape is being drawn
+           */
+          const helperTip = document.getElementById("shape-helper");
+
           if (selectedShape === "rectangle") {
-            /**
-             * setting params to a div, giving user a false info that the shape
-             * is being drawn
-             */
-            const helperTip = document.getElementById("shape-helper");
             if (helperTip) {
               if (width < 0) {
                 helperTip.style.right = `${window.innerWidth - x}px`;
@@ -168,12 +170,17 @@ function App() {
           } else if (selectedShape === "line") {
             const angle = Math.atan2(height, width) * (180 / Math.PI);
             const divWidth = Math.sqrt(width * width + height * height); // since we're trying to draw a diagonal
+            /**
+             * since the connecting line has to be rotated by the center of it
+             *
+             * please visualize by connecting a line between 2 points
+             * and then moving the points :(
+             */
             const cx =
               (originalCursorPosition.x + cursorPosition.x) / 2 - divWidth / 2;
             const cy =
               (originalCursorPosition.y + cursorPosition.y) / 2 - 1 / 2;
 
-            const helperTip = document.getElementById("shape-helper");
             if (helperTip) {
               helperTip.style.transform = `rotate(${angle}deg)`;
               helperTip.style.left = `${cx}px`;
@@ -186,6 +193,51 @@ function App() {
               originalCursorPosition.y
             );
             contextRef.current.lineTo(cursorPosition.x, cursorPosition.y);
+          } else if (selectedShape === "ellipse") {
+            if (helperTip) {
+              if (width < 0) {
+                helperTip.style.right = `${window.innerWidth - x}px`;
+                helperTip.style.left = "unset";
+              } else {
+                helperTip.style.left = `${x}px`;
+                helperTip.style.right = "unset";
+              }
+
+              if (height < 0) {
+                helperTip.style.bottom = `${window.innerHeight - y}px`;
+                helperTip.style.top = "unset";
+              } else {
+                helperTip.style.top = `${y}px`;
+                helperTip.style.bottom = "unset";
+              }
+
+              helperTip.style.width = `${Math.abs(width)}px`;
+              helperTip.style.height = `${Math.abs(height)}px`;
+              helperTip.style.borderRadius = "50%";
+            }
+
+            const xRadius =
+              Math.abs(originalCursorPosition.x - cursorPosition.x) / 2;
+            const yRadius =
+              Math.abs(originalCursorPosition.y - cursorPosition.y) / 2;
+            const cx =
+              originalCursorPosition.x < cursorPosition.x
+                ? originalCursorPosition.x + xRadius
+                : cursorPosition.x + xRadius;
+            const cy =
+              originalCursorPosition.y < cursorPosition.y
+                ? originalCursorPosition.y + yRadius
+                : cursorPosition.y + yRadius;
+
+            contextRef.current.ellipse(
+              cx,
+              cy,
+              xRadius,
+              yRadius,
+              0,
+              0,
+              2 * Math.PI
+            );
           }
         }
       }

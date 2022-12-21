@@ -1,17 +1,15 @@
-import { MouseEvent, useCallback, useMemo } from "react";
 import { useDetectClickOutside } from "react-detect-click-outside";
 
 import shapes from "./shapes.png";
 import square from "./square.png";
-import circle from "./circle.png";
+import ellipse from "./ellipse.png";
 import line from "./line.png";
-import arrow from "./arrow.png";
 
 function Shape(props: {
   isSelected: boolean;
-  selectedShape: "rectangle" | "circle" | "line";
+  selectedShape: "rectangle" | "ellipse" | "line";
   setSelectedShape: React.Dispatch<
-    React.SetStateAction<"rectangle" | "circle" | "line">
+    React.SetStateAction<"rectangle" | "ellipse" | "line">
   >;
   isMenuOpen: boolean;
   openMenu: () => void;
@@ -60,16 +58,16 @@ function Shape(props: {
             }}
           />
           <img
-            src={circle}
-            alt="circle"
+            src={ellipse}
+            alt="ellipse"
             width={24}
             height={24}
             className={
               "cursor-pointer" +
-              (props.selectedShape === "circle" ? " selected-item" : "")
+              (props.selectedShape === "ellipse" ? " selected-item" : "")
             }
             onClick={() => {
-              props.setSelectedShape("circle");
+              props.setSelectedShape("ellipse");
             }}
           />
           <img
@@ -85,8 +83,6 @@ function Shape(props: {
               props.setSelectedShape("line");
             }}
           />
-          {/* <img src={line} alt="line" width={20} height={20} />
-          <img src={arrow} alt="arrow" width={20} height={20} /> */}
         </div>
       ) : null}
     </>

@@ -11,12 +11,14 @@ function Color(props: {
   openMenu: () => void;
   closeMenu: () => void;
 }) {
+  const { isMenuOpen, selectedColor, setSelectedColor } = props;
+
   // creating the hue canvas on the right
   useEffect(() => {
     const hueCanvas = document.getElementById("hue") as HTMLCanvasElement;
     const context = hueCanvas?.getContext("2d");
 
-    if (context && props.isMenuOpen) {
+    if (context && isMenuOpen) {
       const gradient = context.createLinearGradient(0, 0, 0, hueCanvas.height);
 
       for (let i = 0; i <= 24; i++) {
@@ -26,7 +28,7 @@ function Color(props: {
       context.fillStyle = gradient;
       context.fillRect(0, 0, hueCanvas.width, hueCanvas.height);
     }
-  }, [props.isMenuOpen]);
+  }, [isMenuOpen]);
 
   // creating the spectrum canvas on the left for the selected hue
   useEffect(() => {
@@ -35,8 +37,8 @@ function Color(props: {
     ) as HTMLCanvasElement;
     const context = spectrumCanvas?.getContext("2d");
 
-    if (context && props.isMenuOpen) {
-      context.fillStyle = `hsl(${props.selectedColor.hue}, 100%, 50%)`;
+    if (context && isMenuOpen) {
+      context.fillStyle = `hsl(${selectedColor.hue}, 100%, 50%)`;
       context.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
 
       const whiteGradient = context.createLinearGradient(
@@ -61,14 +63,14 @@ function Color(props: {
       context.fillStyle = blackGradient;
       context.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
     }
-  }, [props.selectedColor.hue, props.isMenuOpen]);
+  }, [selectedColor.hue, isMenuOpen]);
 
   const colorHslString = useMemo(
     () =>
-      `hsl(${props.selectedColor.hue}, ${Math.round(
-        props.selectedColor.saturation * 100
-      )}%, ${Math.round(props.selectedColor.lightness * 100)}%)`,
-    [props.selectedColor]
+      `hsl(${selectedColor.hue}, ${Math.round(
+        selectedColor.saturation * 100
+      )}%, ${Math.round(selectedColor.lightness * 100)}%)`,
+    [selectedColor]
   );
 
   const setHue = useCallback(
@@ -83,13 +85,13 @@ function Color(props: {
       if (cursor && (isMouseMove ? event.buttons === 1 : true)) {
         cursor.style.top = `${clickedYCoordinate}px`;
 
-        props.setSelectedColor((currentColor) => ({
+        setSelectedColor((currentColor) => ({
           ...currentColor,
           hue: (clickedYCoordinate / boundingRect.height) * 360,
         }));
       }
     },
-    [props.setSelectedColor]
+    [setSelectedColor]
   );
 
   const setSaturationAndLightness = useCallback(
@@ -124,7 +126,7 @@ function Color(props: {
 
         const lightness = (hsvValue / 2) * (2 - hsvSaturation);
 
-        props.setSelectedColor((currentColor) => ({
+        setSelectedColor((currentColor) => ({
           ...currentColor,
           saturation:
             (hsvValue * hsvSaturation) / (1 - Math.abs(2 * lightness - 1)),
@@ -132,7 +134,7 @@ function Color(props: {
         }));
       }
     },
-    [props.setSelectedColor]
+    [setSelectedColor]
   );
 
   const colorRef = useDetectClickOutside({
@@ -159,7 +161,7 @@ function Color(props: {
           props.openMenu();
         }}
       />
-      {props.isMenuOpen ? (
+      {isMenuOpen ? (
         <div
           className="top-0 right-16 absolute rounded shadow p-4 bg-white flex items-center gap-3"
           ref={colorRef}
@@ -199,7 +201,7 @@ function Color(props: {
               id="hue-cursor"
               className="w-6 h-3 absolute top-0 left-2/4 -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full bg-white border transition-all duration-[10ms]"
               style={{
-                borderColor: `hsl(${props.selectedColor.hue}, 100%, 50%)`,
+                borderColor: `hsl(${selectedColor.hue}, 100%, 50%)`,
               }}
             />
           </div>

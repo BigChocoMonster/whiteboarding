@@ -1,4 +1,4 @@
-import { MouseEvent, useCallback, useMemo } from "react";
+import { MouseEvent, useCallback, useEffect, useMemo } from "react";
 import { useDetectClickOutside } from "react-detect-click-outside";
 
 function Color(props: {
@@ -11,6 +11,58 @@ function Color(props: {
   openMenu: () => void;
   closeMenu: () => void;
 }) {
+  // creating the hue canvas on the right
+  useEffect(() => {
+    const hueCanvas = document.getElementById("hue") as HTMLCanvasElement;
+    const context = hueCanvas?.getContext("2d");
+
+    if (context && props.isMenuOpen) {
+      const gradient = context.createLinearGradient(0, 0, 0, hueCanvas.height);
+
+      for (let i = 0; i <= 24; i++) {
+        gradient.addColorStop((1 / 25) * i, `hsl(${15 * i}, 100%, 50%)`);
+      }
+
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, hueCanvas.width, hueCanvas.height);
+    }
+  }, [props.isMenuOpen]);
+
+  // creating the spectrum canvas on the left for the selected hue
+  useEffect(() => {
+    const spectrumCanvas = document.getElementById(
+      "spectrum"
+    ) as HTMLCanvasElement;
+    const context = spectrumCanvas?.getContext("2d");
+
+    if (context && props.isMenuOpen) {
+      context.fillStyle = `hsl(${props.selectedColor.hue}, 100%, 50%)`;
+      context.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
+
+      const whiteGradient = context.createLinearGradient(
+        0,
+        0,
+        spectrumCanvas.width,
+        0
+      );
+      whiteGradient.addColorStop(0, "white");
+      whiteGradient.addColorStop(1, "transparent");
+      context.fillStyle = whiteGradient;
+      context.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
+
+      const blackGradient = context.createLinearGradient(
+        0,
+        0,
+        0,
+        spectrumCanvas.height
+      );
+      blackGradient.addColorStop(0, "transparent");
+      blackGradient.addColorStop(1, "black");
+      context.fillStyle = blackGradient;
+      context.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
+    }
+  }, [props.selectedColor.hue, props.isMenuOpen]);
+
   const colorHslString = useMemo(
     () =>
       `hsl(${props.selectedColor.hue}, ${Math.round(

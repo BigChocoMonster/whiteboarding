@@ -10,11 +10,11 @@ import {
 import Color from "./Color";
 import Shape from "./Shape";
 
+let originalCursorPosition: { x: number; y: number };
 let cursorPosition: { x: number; y: number };
 
 function App() {
-  const [selected, setSelected] = useState<"color" | "shape">("color");
-
+  const [selected, setSelected] = useState<"color" | "shape">("shape");
   const [menu, setMenu] = useState<"color" | "shape" | null>(null);
 
   const [selectedColor, setSelectedColor] = useState<{
@@ -23,65 +23,9 @@ function App() {
     lightness: number;
   }>({ hue: 0, saturation: 1, lightness: 0.5 });
 
-  // creating the hue canvas on the right
-  useEffect(() => {
-    const hueCanvas = document.getElementById("hue") as HTMLCanvasElement;
-    const context = hueCanvas?.getContext("2d");
-
-    if (context) {
-      const gradient = context.createLinearGradient(0, 0, 0, hueCanvas.height);
-
-      for (let i = 0; i <= 24; i++) {
-        gradient.addColorStop((1 / 25) * i, `hsl(${15 * i}, 100%, 50%)`);
-      }
-
-      context.fillStyle = gradient;
-      context.fillRect(0, 0, hueCanvas.width, hueCanvas.height);
-    }
-  }, [menu]);
-
-  // creating the spectrum canvas on the left for the selected hue
-  useEffect(() => {
-    const spectrumCanvas = document.getElementById(
-      "spectrum"
-    ) as HTMLCanvasElement;
-    const context = spectrumCanvas?.getContext("2d");
-
-    if (context) {
-      context.fillStyle = `hsl(${selectedColor.hue}, 100%, 50%)`;
-      context.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
-
-      const whiteGradient = context.createLinearGradient(
-        0,
-        0,
-        spectrumCanvas.width,
-        0
-      );
-      whiteGradient.addColorStop(0, "white");
-      whiteGradient.addColorStop(1, "transparent");
-      context.fillStyle = whiteGradient;
-      context.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
-
-      const blackGradient = context.createLinearGradient(
-        0,
-        0,
-        0,
-        spectrumCanvas.height
-      );
-      blackGradient.addColorStop(0, "transparent");
-      blackGradient.addColorStop(1, "black");
-      context.fillStyle = blackGradient;
-      context.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
-    }
-  }, [selectedColor.hue, menu]);
-
-  const colorHslString = useMemo(
-    () =>
-      `hsl(${selectedColor.hue}, ${Math.round(
-        selectedColor.saturation * 100
-      )}%, ${Math.round(selectedColor.lightness * 100)}%)`,
-    [selectedColor]
-  );
+  const [selectedShape, setSelectedShape] = useState<
+    "rectangle" | "circle" | "line"
+  >("rectangle");
 
   const contextRef = useRef<CanvasRenderingContext2D>(null);
 
@@ -93,38 +37,143 @@ function App() {
       // @ts-ignore
       contextRef.current = context;
     }
-  }, [colorHslString]);
+  }, [selected, menu, selectedColor, selectedShape]);
 
-  const saveCursorPosition = useCallback(
+  // saves the moving cursor position
+  const saveMovingCursorPosition = useCallback(
     (event: MouseEvent<HTMLCanvasElement>) => {
       cursorPosition = { x: event.clientX, y: event.clientY };
     },
     []
   );
 
-  const draw = useCallback(
+  /**
+   * saves the starting cursor position
+   *
+   * makes the shape helper visible
+   */
+  const saveOriginalCursorPosition = useCallback(
     (event: MouseEvent<HTMLCanvasElement>) => {
-      if (contextRef.current && event.buttons === 1 && cursorPosition) {
-        contextRef.current.beginPath();
+      originalCursorPosition = { x: event.clientX, y: event.clientY };
+      saveMovingCursorPosition(event);
 
-        contextRef.current.moveTo(cursorPosition.x, cursorPosition.y);
-
-        contextRef.current.lineWidth = 1;
-        contextRef.current.lineCap = "round";
-        contextRef.current.strokeStyle = colorHslString;
-
-        cursorPosition = { x: event.clientX, y: event.clientY };
-
-        contextRef.current.lineTo(cursorPosition.x, cursorPosition.y);
-
-        contextRef.current.stroke();
+      const helperTip = document.getElementById("shape-helper");
+      if (helperTip) {
+        helperTip.style.display = "block";
       }
     },
-    [colorHslString]
+    [saveMovingCursorPosition]
+  );
+
+  /**
+   * deletes the starting cursor position
+   *
+   * resets the shape helper
+   *
+   * actually draws the shape if shape is
+   * selected
+   */
+  const deleteOriginalCursorPosition = useCallback(() => {
+    if (selected === "shape") {
+      contextRef.current?.stroke();
+
+      const helperTip = document.getElementById("shape-helper");
+      if (helperTip) {
+        helperTip.style.display = "none";
+        helperTip.style.top = "unset";
+        helperTip.style.right = "unset";
+        helperTip.style.bottom = "unset";
+        helperTip.style.left = "unset";
+        helperTip.style.transform = "unset";
+        helperTip.style.width = "unset";
+        helperTip.style.height = "unset";
+      }
+    }
+
+    // @ts-ignore
+    originalCursorPosition = undefined;
+  }, [selected]);
+
+  // transforms from object to a string that css can understand
+  const colorHslString = useMemo(
+    () =>
+      `hsl(${selectedColor.hue}, ${Math.round(
+        selectedColor.saturation * 100
+      )}%, ${Math.round(selectedColor.lightness * 100)}%)`,
+    [selectedColor]
+  );
+
+  // draws everything on the canvas
+  const draw = useCallback(
+    (event: MouseEvent<HTMLCanvasElement>) => {
+      if (
+        contextRef.current &&
+        event.buttons === 1 &&
+        originalCursorPosition &&
+        cursorPosition
+      ) {
+        contextRef.current.beginPath();
+
+        contextRef.current.lineWidth = 1;
+        contextRef.current.strokeStyle = colorHslString;
+
+        if (selected === "color") {
+          contextRef.current.lineCap = "round";
+
+          contextRef.current.moveTo(cursorPosition.x, cursorPosition.y);
+          saveMovingCursorPosition(event);
+          contextRef.current.lineTo(cursorPosition.x, cursorPosition.y);
+          contextRef.current.stroke();
+        } else if (selected === "shape") {
+          saveMovingCursorPosition(event);
+
+          // calculating all params
+          const x = originalCursorPosition.x;
+          const y = originalCursorPosition.y;
+          const width = cursorPosition.x - originalCursorPosition.x;
+          const height = cursorPosition.y - originalCursorPosition.y;
+
+          if (selectedShape === "rectangle") {
+            /**
+             * setting params to a div, giving user a false info that the shape
+             * is being drawn
+             */
+            const helperTip = document.getElementById("shape-helper");
+            if (helperTip) {
+              if (width < 0) {
+                helperTip.style.right = `${window.innerWidth - x}px`;
+                helperTip.style.left = "unset";
+              } else {
+                helperTip.style.left = `${x}px`;
+                helperTip.style.right = "unset";
+              }
+
+              if (height < 0) {
+                helperTip.style.bottom = `${window.innerHeight - y}px`;
+                helperTip.style.top = "unset";
+              } else {
+                helperTip.style.top = `${y}px`;
+                helperTip.style.bottom = "unset";
+              }
+
+              helperTip.style.width = `${Math.abs(width)}px`;
+              helperTip.style.height = `${Math.abs(height)}px`;
+            }
+
+            /**
+             * developing the shape anyway on the background without
+             * actually drawing, aka, without calling the stroke method
+             */
+            contextRef.current.rect(x, y, width, height);
+          }
+        }
+      }
+    },
+    [selected, colorHslString, saveMovingCursorPosition, selectedShape]
   );
 
   return (
-    <div>
+    <div className="select-none">
       <div className="fixed top-2/4 right-0 -translate-y-2/4 rounded-l-xl shadow p-3 bg-white flex flex-col gap-2">
         <Color
           isSelected={selected === "color"}
@@ -141,6 +190,8 @@ function App() {
         />
         <Shape
           isSelected={selected === "shape"}
+          selectedShape={selectedShape}
+          setSelectedShape={setSelectedShape}
           isMenuOpen={menu === "shape"}
           openMenu={() => {
             setMenu("shape");
@@ -155,8 +206,15 @@ function App() {
         id="board"
         width={window.innerWidth}
         height={window.innerHeight}
-        onMouseDown={saveCursorPosition}
+        onMouseDown={saveOriginalCursorPosition}
         onMouseMove={draw}
+        onMouseUp={deleteOriginalCursorPosition}
+      />
+      <div
+        className="fixed border select-none"
+        style={{ borderColor: colorHslString }}
+        id="shape-helper"
+        onMouseUp={deleteOriginalCursorPosition}
       />
     </div>
   );

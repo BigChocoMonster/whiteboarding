@@ -165,6 +165,27 @@ function App() {
              * actually drawing, aka, without calling the stroke method
              */
             contextRef.current.rect(x, y, width, height);
+          } else if (selectedShape === "line") {
+            const angle = Math.atan2(height, width) * (180 / Math.PI);
+            const divWidth = Math.sqrt(width * width + height * height); // since we're trying to draw a diagonal
+            const cx =
+              (originalCursorPosition.x + cursorPosition.x) / 2 - divWidth / 2;
+            const cy =
+              (originalCursorPosition.y + cursorPosition.y) / 2 - 1 / 2;
+
+            const helperTip = document.getElementById("shape-helper");
+            if (helperTip) {
+              helperTip.style.transform = `rotate(${angle}deg)`;
+              helperTip.style.left = `${cx}px`;
+              helperTip.style.top = `${cy}px`;
+              helperTip.style.width = `${divWidth}px`;
+            }
+
+            contextRef.current.moveTo(
+              originalCursorPosition.x,
+              originalCursorPosition.y
+            );
+            contextRef.current.lineTo(cursorPosition.x, cursorPosition.y);
           }
         }
       }

@@ -1,4 +1,4 @@
-import { MouseEvent, useCallback, useEffect, useMemo } from "react";
+import { MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useDetectClickOutside } from "react-detect-click-outside";
 
 function Color(props: {
@@ -73,6 +73,8 @@ function Color(props: {
     [selectedColor]
   );
 
+  const [hueCoordinate, setHueCoordinate] = useState<number>(0);
+
   const setHue = useCallback(
     (event: MouseEvent<HTMLCanvasElement>, isMouseMove: boolean) => {
       const boundingRect = (
@@ -80,10 +82,8 @@ function Color(props: {
       ).getBoundingClientRect();
       const clickedYCoordinate = event.clientY - boundingRect.top;
 
-      const cursor = document.getElementById("hue-cursor");
-
-      if (cursor && (isMouseMove ? event.buttons === 1 : true)) {
-        cursor.style.top = `${clickedYCoordinate}px`;
+      if (isMouseMove ? event.buttons === 1 : true) {
+        setHueCoordinate(clickedYCoordinate);
 
         setSelectedColor((currentColor) => ({
           ...currentColor,
@@ -94,6 +94,11 @@ function Color(props: {
     [setSelectedColor]
   );
 
+  const [slCoordinates, setSlCoordinates] = useState<{ x: number; y: number }>({
+    x: 200,
+    y: 0,
+  });
+
   const setSaturationAndLightness = useCallback(
     (event: MouseEvent<HTMLCanvasElement>, isMouseMove: boolean) => {
       const boundingRect = (
@@ -102,10 +107,8 @@ function Color(props: {
       const clickedXCoordinate = event.clientX - boundingRect.left;
       const clickedYCoordinate = event.clientY - boundingRect.top;
 
-      const cursor = document.getElementById("spectrum-cursor");
-      if (cursor && (isMouseMove ? event.buttons === 1 : true)) {
-        cursor.style.left = `${clickedXCoordinate}px`;
-        cursor.style.top = `${clickedYCoordinate}px`;
+      if (isMouseMove ? event.buttons === 1 : true) {
+        setSlCoordinates({ x: clickedXCoordinate, y: clickedYCoordinate });
 
         const xRatio = clickedXCoordinate / boundingRect.width;
         const yRatio = clickedYCoordinate / boundingRect.height;
@@ -158,7 +161,11 @@ function Color(props: {
           backgroundColor: colorHslString,
         }}
         onClick={() => {
-          props.openMenu();
+          if (props.isMenuOpen) {
+            props.closeMenu();
+          } else {
+            props.openMenu();
+          }
         }}
       />
       {isMenuOpen ? (
@@ -181,7 +188,11 @@ function Color(props: {
             />
             <div
               id="spectrum-cursor"
-              className="w-6 h-6 absolute top-0 -right-6 -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full shadow-2xl border-2 border-white transition-all duration-[10ms]"
+              className="w-6 h-6 absolute -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full shadow-2xl border-2 border-white transition-all duration-[10ms]"
+              style={{
+                top: `${slCoordinates.y}px`,
+                left: `${slCoordinates.x}px`,
+              }}
             />
           </div>
           <div className="relative">
@@ -199,8 +210,9 @@ function Color(props: {
             />
             <div
               id="hue-cursor"
-              className="w-6 h-3 absolute top-0 left-2/4 -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full bg-white border transition-all duration-[10ms]"
+              className="w-6 h-3 absolute left-2/4 -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full bg-white border transition-all duration-[10ms]"
               style={{
+                top: `${hueCoordinate}px`, // reversal of setting hue from coordinate
                 borderColor: `hsl(${selectedColor.hue}, 100%, 50%)`,
               }}
             />

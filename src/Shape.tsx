@@ -36,7 +36,11 @@ function Shape(props: {
           backgroundImage: `url("${shapes}")`,
         }}
         onClick={() => {
-          props.openMenu();
+          if (props.isMenuOpen) {
+            props.closeMenu();
+          } else {
+            props.openMenu();
+          }
         }}
       />
       {props.isMenuOpen ? (

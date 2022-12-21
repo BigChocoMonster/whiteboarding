@@ -13,6 +13,8 @@ import Shape from "./Shape";
 let cursorPosition: { x: number; y: number };
 
 function App() {
+  const [selected, setSelected] = useState<"color" | "shape">("color");
+
   const [menu, setMenu] = useState<"color" | "shape" | null>(null);
 
   const [selectedColor, setSelectedColor] = useState<{
@@ -125,20 +127,24 @@ function App() {
     <div>
       <div className="fixed top-2/4 right-0 -translate-y-2/4 rounded-l-xl shadow p-3 bg-white flex flex-col gap-2">
         <Color
+          isSelected={selected === "color"}
           selectedColor={selectedColor}
           setSelectedColor={setSelectedColor}
           isMenuOpen={menu === "color"}
           openMenu={() => {
             setMenu("color");
+            setSelected("color");
           }}
           closeMenu={() => {
             setMenu(null);
           }}
         />
         <Shape
+          isSelected={selected === "shape"}
           isMenuOpen={menu === "shape"}
           openMenu={() => {
             setMenu("shape");
+            setSelected("shape");
           }}
           closeMenu={() => {
             setMenu(null);

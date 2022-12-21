@@ -8,6 +8,7 @@ import line from "./line.png";
 import arrow from "./arrow.png";
 
 function Shape(props: {
+  isSelected: boolean;
   // selectedColor: { hue: number; saturation: number; lightness: number };
   // setSelectedColor: React.Dispatch<
   //   React.SetStateAction<{ hue: number; saturation: number; lightness: number }>
@@ -29,7 +30,10 @@ function Shape(props: {
     <>
       <div
         id="shape-trigger"
-        className="cursor-pointer h-8 w-8 bg-contain"
+        className={
+          "rounded-full cursor-pointer h-8 w-8 bg-contain" +
+          (props.isSelected ? " selected-item" : "")
+        }
         style={{
           backgroundImage: `url("${shapes}")`,
         }}

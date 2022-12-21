@@ -2,6 +2,7 @@ import { MouseEvent, useCallback, useMemo } from "react";
 import { useDetectClickOutside } from "react-detect-click-outside";
 
 function Color(props: {
+  isSelected: boolean;
   selectedColor: { hue: number; saturation: number; lightness: number };
   setSelectedColor: React.Dispatch<
     React.SetStateAction<{ hue: number; saturation: number; lightness: number }>
@@ -95,7 +96,10 @@ function Color(props: {
     <>
       <div
         id="color-trigger"
-        className="rounded-full border border-slate-300 cursor-pointer h-8 w-8"
+        className={
+          "rounded-full border border-slate-300 cursor-pointer h-8 w-8" +
+          (props.isSelected ? " selected-item" : "")
+        }
         style={{
           backgroundColor: colorHslString,
         }}

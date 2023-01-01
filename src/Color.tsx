@@ -1,5 +1,6 @@
 import { MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useDetectClickOutside } from "react-detect-click-outside";
+import { AiOutlineCopy } from "react-icons/ai";
 
 function Color(props: {
   selectedColor: { hue: number; saturation: number; lightness: number };
@@ -147,6 +148,66 @@ function Color(props: {
     },
   });
 
+  /**
+   * hsl -> rgb
+   * https://www.rapidtables.com/convert/color/hsl-to-rgb.html
+   * https://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/ (explains the formula somewhat ?)
+   */
+  const hslToHex = useMemo(() => {
+    const { hue: h, saturation: s, lightness: l } = selectedColor;
+
+    const temp1 = (1 - Math.abs(2 * l - 1)) * s;
+    const temp2 = temp1 * (1 - Math.abs(((h / 60) % 2) - 1));
+    const temp3 = l - temp1 / 2;
+
+    let tempRGB = { r: 0, g: 0, b: 0 };
+
+    if (h < 60) {
+      tempRGB = {
+        r: temp1,
+        g: temp2,
+        b: 0,
+      };
+    } else if (h >= 60 && h < 120) {
+      tempRGB = {
+        r: temp2,
+        g: temp1,
+        b: 0,
+      };
+    } else if (h >= 120 && h < 180) {
+      tempRGB = {
+        r: 0,
+        g: temp1,
+        b: temp2,
+      };
+    } else if (h >= 180 && h < 240) {
+      tempRGB = {
+        r: 0,
+        g: temp2,
+        b: temp1,
+      };
+    } else if (h >= 240 && h < 300) {
+      tempRGB = {
+        r: temp2,
+        g: 0,
+        b: temp1,
+      };
+    } else if (h >= 300 && h < 360) {
+      tempRGB = {
+        r: temp1,
+        g: 0,
+        b: temp2,
+      };
+    }
+
+    return Object.keys(tempRGB).reduce((acc, key) => {
+      const finalHue = (tempRGB[key as keyof typeof tempRGB] + temp3) * 255;
+      const hueHex: string = parseInt(finalHue.toFixed(2)).toString(16);
+
+      return acc + hueHex.padStart(2, "0");
+    }, "#");
+  }, [selectedColor]);
+
   return (
     <>
       <div
@@ -165,53 +226,70 @@ function Color(props: {
       />
       {isMenuOpen ? (
         <div
-          className="top-0 left-16 absolute rounded shadow p-4 bg-white flex items-center gap-3"
+          className="top-0 left-16 absolute rounded shadow p-4 bg-white flex flex-col gap-3"
           ref={colorRef}
         >
-          <div className="relative overflow-hidden">
-            <canvas
-              id="spectrum"
-              width={200}
-              height={200}
-              className="rounded cursor-pointer"
-              onMouseMove={(event: MouseEvent<HTMLCanvasElement>) => {
-                setSaturationAndLightness(event, true);
-              }}
-              onClick={(event: MouseEvent<HTMLCanvasElement>) => {
-                setSaturationAndLightness(event, false);
+          <section className="flex items-center gap-3">
+            <div className="relative overflow-hidden">
+              <canvas
+                id="spectrum"
+                width={200}
+                height={200}
+                className="rounded cursor-pointer"
+                onMouseMove={(event: MouseEvent<HTMLCanvasElement>) => {
+                  setSaturationAndLightness(event, true);
+                }}
+                onClick={(event: MouseEvent<HTMLCanvasElement>) => {
+                  setSaturationAndLightness(event, false);
+                }}
+              />
+              <div
+                id="spectrum-cursor"
+                className="w-6 h-6 absolute -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full shadow-2xl border-2 border-white transition-all duration-[10ms]"
+                style={{
+                  top: `${slCoordinates.y}px`,
+                  left: `${slCoordinates.x}px`,
+                }}
+              />
+            </div>
+            <div className="relative">
+              <canvas
+                id="hue"
+                width={10}
+                height={192}
+                className="rounded cursor-pointer"
+                onMouseMove={(event: MouseEvent<HTMLCanvasElement>) => {
+                  setHue(event, true);
+                }}
+                onClick={(event: MouseEvent<HTMLCanvasElement>) => {
+                  setHue(event, false);
+                }}
+              />
+              <div
+                id="hue-cursor"
+                className="w-6 h-3 absolute left-2/4 -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full bg-white border transition-all duration-[10ms]"
+                style={{
+                  top: `${hueCoordinate}px`, // reversal of setting hue from coordinate
+                  borderColor: `hsl(${selectedColor.hue}, 100%, 50%)`,
+                }}
+              />
+            </div>
+          </section>
+          <section className="flex items-center gap-2">
+            <p>{hslToHex}</p>
+            <AiOutlineCopy
+              className="cursor-pointer"
+              onClick={() => {
+                if (typeof navigator?.clipboard?.writeText === "function") {
+                  navigator.clipboard.writeText(hslToHex).then(() => {
+                    alert("copied successfully");
+                  });
+                } else {
+                  alert("auto copying not supported in your browser");
+                }
               }}
             />
-            <div
-              id="spectrum-cursor"
-              className="w-6 h-6 absolute -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full shadow-2xl border-2 border-white transition-all duration-[10ms]"
-              style={{
-                top: `${slCoordinates.y}px`,
-                left: `${slCoordinates.x}px`,
-              }}
-            />
-          </div>
-          <div className="relative">
-            <canvas
-              id="hue"
-              width={10}
-              height={192}
-              className="rounded cursor-pointer"
-              onMouseMove={(event: MouseEvent<HTMLCanvasElement>) => {
-                setHue(event, true);
-              }}
-              onClick={(event: MouseEvent<HTMLCanvasElement>) => {
-                setHue(event, false);
-              }}
-            />
-            <div
-              id="hue-cursor"
-              className="w-6 h-3 absolute left-2/4 -translate-x-2/4 -translate-y-2/4 cursor-pointer rounded-full bg-white border transition-all duration-[10ms]"
-              style={{
-                top: `${hueCoordinate}px`, // reversal of setting hue from coordinate
-                borderColor: `hsl(${selectedColor.hue}, 100%, 50%)`,
-              }}
-            />
-          </div>
+          </section>
         </div>
       ) : null}
     </>

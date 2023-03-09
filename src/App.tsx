@@ -38,6 +38,19 @@ function App() {
     }
   }, [selected, selectedColor]);
 
+  /**
+   * maintaining states so that we can allow user to undo stuff
+   */
+  const [shapeStates, setShapeStates] = useState<
+    {
+      type: typeof selected;
+      details: {
+        originalCursorPosition: typeof originalCursorPosition;
+        finalCursorPosition: typeof cursorPosition;
+      };
+    }[]
+  >([]);
+
   // saves the moving cursor position
   const saveMovingCursorPosition = useCallback(
     (event: MouseEvent<HTMLCanvasElement>) => {
@@ -69,12 +82,20 @@ function App() {
    *
    * resets the shape helper
    *
-   * actually draws the shape if shape is
+   * actually helps draw the shape if shape is
    * selected
    */
   const deleteOriginalCursorPosition = useCallback(() => {
     if (selected !== "pencil") {
-      contextRef.current?.stroke();
+      const newShape: typeof shapeStates[number] = {
+        type: selected,
+        details: {
+          originalCursorPosition,
+          finalCursorPosition: cursorPosition,
+        },
+      };
+      setShapeStates((currentStates) => currentStates.concat(newShape));
+      draw(newShape);
 
       const helperTip = document.getElementById("shape-helper");
       if (helperTip) {
@@ -103,8 +124,11 @@ function App() {
     [selectedColor]
   );
 
-  // draws everything on the canvas
-  const draw = useCallback(
+  /**
+   * creates an illusion that something is being drawn but actual
+   * painting will be done once user drops the cursor
+   */
+  const drawFake = useCallback(
     (event: MouseEvent<HTMLCanvasElement>) => {
       if (
         contextRef.current &&
@@ -160,12 +184,6 @@ function App() {
               helperTip.style.width = `${Math.abs(width)}px`;
               helperTip.style.height = `${Math.abs(height)}px`;
             }
-
-            /**
-             * developing the shape anyway on the background without
-             * actually drawing, aka, without calling the stroke method
-             */
-            contextRef.current.rect(x, y, width, height);
           } else if (selected === "line") {
             const angle = Math.atan2(height, width) * (180 / Math.PI);
             const divWidth = Math.sqrt(width * width + height * height); // since we're trying to draw a diagonal
@@ -186,12 +204,6 @@ function App() {
               helperTip.style.top = `${cy}px`;
               helperTip.style.width = `${divWidth}px`;
             }
-
-            contextRef.current.moveTo(
-              originalCursorPosition.x,
-              originalCursorPosition.y
-            );
-            contextRef.current.lineTo(cursorPosition.x, cursorPosition.y);
           } else if (selected === "ellipse") {
             if (helperTip) {
               if (width < 0) {
@@ -214,19 +226,75 @@ function App() {
               helperTip.style.height = `${Math.abs(height)}px`;
               helperTip.style.borderRadius = "50%";
             }
+          }
+        }
+      }
+    },
+    [selected, colorHslString, saveMovingCursorPosition]
+  );
 
+  /**
+   * this performs the actual painting on canvas depending
+   * on the shape
+   */
+  const draw = useCallback(
+    (shape: typeof shapeStates[number]) => {
+      if (contextRef.current) {
+        contextRef.current.beginPath();
+
+        contextRef.current.lineWidth = 1;
+        contextRef.current.strokeStyle = colorHslString;
+
+        const x = shape.details.originalCursorPosition.x;
+        const y = shape.details.originalCursorPosition.y;
+        const width =
+          shape.details.finalCursorPosition.x -
+          shape.details.originalCursorPosition.x;
+        const height =
+          shape.details.finalCursorPosition.y -
+          shape.details.originalCursorPosition.y;
+
+        switch (shape.type) {
+          case "rectangle": {
+            contextRef.current.rect(x, y, width, height);
+
+            break;
+          }
+
+          case "line": {
+            contextRef.current.moveTo(
+              shape.details.originalCursorPosition.x,
+              shape.details.originalCursorPosition.y
+            );
+            contextRef.current.lineTo(
+              shape.details.finalCursorPosition.x,
+              shape.details.finalCursorPosition.y
+            );
+
+            break;
+          }
+
+          case "ellipse": {
             const xRadius =
-              Math.abs(originalCursorPosition.x - cursorPosition.x) / 2;
+              Math.abs(
+                shape.details.originalCursorPosition.x -
+                  shape.details.finalCursorPosition.x
+              ) / 2;
             const yRadius =
-              Math.abs(originalCursorPosition.y - cursorPosition.y) / 2;
+              Math.abs(
+                shape.details.originalCursorPosition.y -
+                  shape.details.finalCursorPosition.y
+              ) / 2;
             const cx =
-              originalCursorPosition.x < cursorPosition.x
-                ? originalCursorPosition.x + xRadius
-                : cursorPosition.x + xRadius;
+              shape.details.originalCursorPosition.x <
+              shape.details.finalCursorPosition.x
+                ? shape.details.originalCursorPosition.x + xRadius
+                : shape.details.finalCursorPosition.x + xRadius;
             const cy =
-              originalCursorPosition.y < cursorPosition.y
-                ? originalCursorPosition.y + yRadius
-                : cursorPosition.y + yRadius;
+              shape.details.originalCursorPosition.y <
+              shape.details.finalCursorPosition.y
+                ? shape.details.originalCursorPosition.y + yRadius
+                : shape.details.finalCursorPosition.y + yRadius;
 
             contextRef.current.ellipse(
               cx,
@@ -237,23 +305,31 @@ function App() {
               0,
               2 * Math.PI
             );
+
+            break;
+          }
+
+          default: {
+            // do nothing
           }
         }
+
+        contextRef.current.stroke();
       }
     },
-    [selected, colorHslString, saveMovingCursorPosition]
+    [colorHslString]
   );
 
   return (
     <>
-      <div className="fixed w-fit top-2/4 left-0 -translate-y-2/4 flex flex-col gap-4 select-none">
-        <div className="relative rounded-r-xl shadow p-3 bg-white flex flex-col gap-2">
+      <div className="fixed w-fit top-2/4 left-0 -translate-y-2/4 flex flex-col gap-6 select-none">
+        <div className="relative rounded-r-xl shadow-lg p-3 bg-white flex flex-col gap-4">
           <Color
             selectedColor={selectedColor}
             setSelectedColor={setSelectedColor}
           />
         </div>
-        <div className="rounded-r-xl shadow p-3 bg-white flex flex-col gap-2">
+        <div className="rounded-r-xl shadow-lg p-3 bg-white flex flex-col gap-4">
           <Rectangle
             isSelected={selected === "rectangle"}
             selectionColor={colorHslString}
@@ -282,7 +358,7 @@ function App() {
         width={window.innerWidth}
         height={window.innerHeight}
         onMouseDown={saveOriginalCursorPosition}
-        onMouseMove={draw}
+        onMouseMove={drawFake}
         onMouseUp={deleteOriginalCursorPosition}
       />
       <div

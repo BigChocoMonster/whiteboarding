@@ -6,20 +6,23 @@ import {
   useRef,
   useState,
 } from "react";
-import { BsArrowCounterclockwise, BsArrowClockwise } from "react-icons/bs";
+import { TbArrowBackUp, TbArrowForwardUp } from "react-icons/tb";
 
 import Color from "./Color";
 import Rectangle from "./Rectangle";
 import Ellipse from "./Ellipse";
 import Line from "./Line";
+import Pencil from "./Pencil";
 
 let originalCursorPosition: { x: number; y: number };
 let cursorPosition: { x: number; y: number };
 
+let pencilStates: { x: number; y: number }[] = [];
+
 function App() {
-  const [selected, setSelected] = useState<
+  const [selectedShape, setSelectedShape] = useState<
     "pencil" | "rectangle" | "ellipse" | "line"
-  >("rectangle");
+  >("pencil");
 
   const [selectedColor, setSelectedColor] = useState<{
     hue: number;
@@ -37,20 +40,27 @@ function App() {
       // @ts-ignore
       contextRef.current = context;
     }
-  }, [selected, selectedColor]);
+  }, [selectedShape, selectedColor]);
 
   /**
    * maintaining states so that we can allow user to undo stuff
    */
   const [shapes, setShapes] = useState<
-    {
-      type: typeof selected;
-      color: string;
-      details: {
-        originalCursorPosition: typeof originalCursorPosition;
-        finalCursorPosition: typeof cursorPosition;
-      };
-    }[]
+    (
+      | {
+          type: "rectangle" | "ellipse" | "line";
+          color: string;
+          details: {
+            originalCursorPosition: typeof originalCursorPosition;
+            finalCursorPosition: typeof cursorPosition;
+          };
+        }
+      | {
+          type: "pencil";
+          color: string;
+          details: typeof cursorPosition[];
+        }
+    )[]
   >([]);
 
   /**
@@ -59,12 +69,9 @@ function App() {
   const [poppedShapes, setPoppedShapes] = useState<typeof shapes>([]);
 
   // saves the moving cursor position
-  const saveMovingCursorPosition = useCallback(
-    (event: MouseEvent<HTMLCanvasElement>) => {
-      cursorPosition = { x: event.clientX, y: event.clientY };
-    },
-    []
-  );
+  const saveMovingCursorPosition = useCallback((event: MouseEvent) => {
+    cursorPosition = { x: event.clientX, y: event.clientY };
+  }, []);
 
   /**
    * saves the starting cursor position
@@ -76,12 +83,19 @@ function App() {
       originalCursorPosition = { x: event.clientX, y: event.clientY };
       saveMovingCursorPosition(event);
 
-      const helperTip = document.getElementById("shape-helper");
-      if (helperTip) {
-        helperTip.style.display = "block";
+      if (selectedShape !== "pencil") {
+        const shapeHelper = document.getElementById("shape-helper");
+        if (shapeHelper) {
+          shapeHelper.style.display = "block";
+        }
+      } else {
+        const pencilHelper = document.getElementById("pencil-helper");
+        if (pencilHelper) {
+          pencilHelper.style.display = "inline";
+        }
       }
     },
-    [saveMovingCursorPosition]
+    [saveMovingCursorPosition, selectedShape]
   );
 
   // transforms from object to a string that css can understand
@@ -104,83 +118,95 @@ function App() {
       contextRef.current.lineWidth = 1;
       contextRef.current.strokeStyle = shape.color;
 
-      const x = shape.details.originalCursorPosition.x;
-      const y = shape.details.originalCursorPosition.y;
-      const width =
-        shape.details.finalCursorPosition.x -
-        shape.details.originalCursorPosition.x;
-      const height =
-        shape.details.finalCursorPosition.y -
-        shape.details.originalCursorPosition.y;
+      if (shape.type !== "pencil") {
+        const x = shape.details.originalCursorPosition.x;
+        const y = shape.details.originalCursorPosition.y;
+        const width =
+          shape.details.finalCursorPosition.x -
+          shape.details.originalCursorPosition.x;
+        const height =
+          shape.details.finalCursorPosition.y -
+          shape.details.originalCursorPosition.y;
 
-      switch (shape.type) {
-        case "rectangle": {
-          contextRef.current.rect(x, y, width, height);
+        switch (shape.type) {
+          case "rectangle": {
+            contextRef.current.rect(x, y, width, height);
 
-          break;
+            break;
+          }
+
+          case "line": {
+            contextRef.current.moveTo(
+              shape.details.originalCursorPosition.x,
+              shape.details.originalCursorPosition.y
+            );
+            contextRef.current.lineTo(
+              shape.details.finalCursorPosition.x,
+              shape.details.finalCursorPosition.y
+            );
+
+            break;
+          }
+
+          case "ellipse": {
+            const xRadius =
+              Math.abs(
+                shape.details.originalCursorPosition.x -
+                  shape.details.finalCursorPosition.x
+              ) / 2;
+            const yRadius =
+              Math.abs(
+                shape.details.originalCursorPosition.y -
+                  shape.details.finalCursorPosition.y
+              ) / 2;
+            const cx =
+              shape.details.originalCursorPosition.x <
+              shape.details.finalCursorPosition.x
+                ? shape.details.originalCursorPosition.x + xRadius
+                : shape.details.finalCursorPosition.x + xRadius;
+            const cy =
+              shape.details.originalCursorPosition.y <
+              shape.details.finalCursorPosition.y
+                ? shape.details.originalCursorPosition.y + yRadius
+                : shape.details.finalCursorPosition.y + yRadius;
+
+            contextRef.current.ellipse(
+              cx,
+              cy,
+              xRadius,
+              yRadius,
+              0,
+              0,
+              2 * Math.PI
+            );
+
+            break;
+          }
+
+          default: {
+            // do nothing
+          }
         }
 
-        case "line": {
-          contextRef.current.moveTo(
-            shape.details.originalCursorPosition.x,
-            shape.details.originalCursorPosition.y
-          );
-          contextRef.current.lineTo(
-            shape.details.finalCursorPosition.x,
-            shape.details.finalCursorPosition.y
-          );
-
-          break;
-        }
-
-        case "ellipse": {
-          const xRadius =
-            Math.abs(
-              shape.details.originalCursorPosition.x -
-                shape.details.finalCursorPosition.x
-            ) / 2;
-          const yRadius =
-            Math.abs(
-              shape.details.originalCursorPosition.y -
-                shape.details.finalCursorPosition.y
-            ) / 2;
-          const cx =
-            shape.details.originalCursorPosition.x <
-            shape.details.finalCursorPosition.x
-              ? shape.details.originalCursorPosition.x + xRadius
-              : shape.details.finalCursorPosition.x + xRadius;
-          const cy =
-            shape.details.originalCursorPosition.y <
-            shape.details.finalCursorPosition.y
-              ? shape.details.originalCursorPosition.y + yRadius
-              : shape.details.finalCursorPosition.y + yRadius;
-
-          contextRef.current.ellipse(
-            cx,
-            cy,
-            xRadius,
-            yRadius,
-            0,
-            0,
-            2 * Math.PI
-          );
-
-          break;
-        }
-
-        default: {
-          // do nothing
-        }
+        contextRef.current.stroke();
+      } else {
+        // do nothing since it's already drawn
+        contextRef.current.lineCap = "round";
+        contextRef.current.lineWidth = 1;
+        contextRef.current.moveTo(shape.details[0]?.x, shape.details[1]?.y);
+        shape.details.forEach((cursor) => {
+          contextRef.current?.lineTo(cursor.x, cursor.y);
+          contextRef.current?.stroke();
+          contextRef.current?.moveTo(cursor.x, cursor.y);
+        });
       }
-
-      contextRef.current.stroke();
     }
   }, []);
 
   /**
    * deletes the starting cursor position
    *
-   * resets the shape helper
+   * resets the helper tips
    *
    * stores data in selected and popped shapes arrays
    *
@@ -188,13 +214,13 @@ function App() {
    * selected
    */
   const deleteOriginalCursorPosition = useCallback(() => {
-    if (selected !== "pencil") {
+    if (selectedShape !== "pencil") {
       const newShape: typeof shapes[number] = {
-        type: selected,
+        type: selectedShape,
         color: colorHslString,
         details: {
-          originalCursorPosition,
-          finalCursorPosition: cursorPosition,
+          originalCursorPosition: { ...originalCursorPosition },
+          finalCursorPosition: { ...cursorPosition },
         },
       };
       setShapes((currents) => currents.concat(newShape));
@@ -217,18 +243,38 @@ function App() {
         helperTip.style.transform = "unset";
         helperTip.style.borderRadius = "unset";
       }
+    } else {
+      const newShape: typeof shapes[number] = {
+        type: "pencil",
+        color: colorHslString,
+        details: pencilStates,
+      };
+      setShapes((currents) => currents.concat(newShape));
+      /**
+       * a new shape drawn on canvas means the user can't redo older shapes
+       * since otherwise the timeline of shapes is not be sequential
+       */
+      setPoppedShapes([]);
+      pencilStates = [];
+      draw(newShape);
+
+      const helperTip = document.getElementById("pencil-helper");
+      if (helperTip) {
+        helperTip.firstElementChild?.setAttribute("d", "");
+        helperTip.style.display = "none";
+      }
     }
 
     // @ts-ignore
     originalCursorPosition = undefined;
-  }, [selected, colorHslString, draw]);
+  }, [selectedShape, colorHslString, draw, pencilStates.length]);
 
   /**
    * creates an illusion that something is being drawn but actual
    * painting will be done once user drops the cursor
    */
   const drawFake = useCallback(
-    (event: MouseEvent<HTMLCanvasElement>) => {
+    (event: MouseEvent) => {
       if (
         contextRef.current &&
         event.buttons === 1 &&
@@ -240,13 +286,19 @@ function App() {
         contextRef.current.lineWidth = 1;
         contextRef.current.strokeStyle = colorHslString;
 
-        if (selected === "pencil") {
-          contextRef.current.lineCap = "round";
+        if (selectedShape === "pencil") {
+          const helperTip = document.querySelector("#pencil-helper > path");
 
-          contextRef.current.moveTo(cursorPosition.x, cursorPosition.y);
+          let path = helperTip?.getAttribute("d") || "";
+          // contextRef.current.moveTo(cursorPosition.x, cursorPosition.y);
+          path += ` M ${cursorPosition.x} ${cursorPosition.y}`;
           saveMovingCursorPosition(event);
-          contextRef.current.lineTo(cursorPosition.x, cursorPosition.y);
-          contextRef.current.stroke();
+          pencilStates.push({ ...cursorPosition });
+          // contextRef.current.lineTo(cursorPosition.x, cursorPosition.y);
+          // contextRef.current.stroke();
+          path += ` L ${cursorPosition.x} ${cursorPosition.y}`;
+
+          helperTip?.setAttribute("d", path);
         } else {
           saveMovingCursorPosition(event);
 
@@ -262,7 +314,7 @@ function App() {
            */
           const helperTip = document.getElementById("shape-helper");
 
-          if (selected === "rectangle") {
+          if (selectedShape === "rectangle") {
             if (helperTip) {
               if (width < 0) {
                 helperTip.style.right = `${window.innerWidth - x}px`;
@@ -283,7 +335,7 @@ function App() {
               helperTip.style.width = `${Math.abs(width)}px`;
               helperTip.style.height = `${Math.abs(height)}px`;
             }
-          } else if (selected === "line") {
+          } else if (selectedShape === "line") {
             const angle = Math.atan2(height, width) * (180 / Math.PI);
             const divWidth = Math.sqrt(width * width + height * height); // since we're trying to draw a diagonal
             /**
@@ -303,7 +355,7 @@ function App() {
               helperTip.style.top = `${cy}px`;
               helperTip.style.width = `${divWidth}px`;
             }
-          } else if (selected === "ellipse") {
+          } else if (selectedShape === "ellipse") {
             if (helperTip) {
               if (width < 0) {
                 helperTip.style.right = `${window.innerWidth - x}px`;
@@ -329,7 +381,7 @@ function App() {
         }
       }
     },
-    [selected, colorHslString, saveMovingCursorPosition]
+    [selectedShape, colorHslString, saveMovingCursorPosition]
   );
 
   /**
@@ -414,26 +466,33 @@ function App() {
             setSelectedColor={setSelectedColor}
           />
         </div>
-        <div className="rounded-xl shadow-xl hover:shadow-2xl p-3 bg-white flex flex-col gap-4">
-          <Rectangle
-            isSelected={selected === "rectangle"}
+        <div className="rounded-xl shadow-xl hover:shadow-2xl p-3 bg-white flex flex-col gap-2">
+          <Pencil
+            isSelected={selectedShape === "pencil"}
             selectionColor={colorHslString}
             select={() => {
-              setSelected("rectangle");
+              setSelectedShape("pencil");
+            }}
+          />
+          <Rectangle
+            isSelected={selectedShape === "rectangle"}
+            selectionColor={colorHslString}
+            select={() => {
+              setSelectedShape("rectangle");
             }}
           />
           <Ellipse
-            isSelected={selected === "ellipse"}
+            isSelected={selectedShape === "ellipse"}
             selectionColor={colorHslString}
             select={() => {
-              setSelected("ellipse");
+              setSelectedShape("ellipse");
             }}
           />
           <Line
-            isSelected={selected === "line"}
+            isSelected={selectedShape === "line"}
             selectionColor={colorHslString}
             select={() => {
-              setSelected("line");
+              setSelectedShape("line");
             }}
           />
         </div>
@@ -442,21 +501,21 @@ function App() {
         <div className="relative rounded-xl shadow-xl hover:shadow-2xl p-3 bg-white flex gap-4">
           <button
             disabled={shapes.length < 1}
-            className={`cursor-pointer p-2 rounded`}
+            className={`cursor-pointer p-2 rounded [&:not(:disabled)]:hover:bg-slate-100`}
             onClick={undoShape}
           >
-            <BsArrowCounterclockwise
-              size={24}
+            <TbArrowBackUp
+              size={32}
               color={shapes.length < 1 ? "rgb(100, 116, 139)" : ""}
             />
           </button>
           <button
             disabled={poppedShapes.length < 1}
-            className={`cursor-pointer p-2 rounded`}
+            className={`cursor-pointer p-2 rounded [&:not(:disabled)]:hover:bg-slate-100`}
             onClick={redoShape}
           >
-            <BsArrowClockwise
-              size={24}
+            <TbArrowForwardUp
+              size={32}
               color={poppedShapes.length < 1 ? "rgb(100, 116, 139)" : ""}
             />
           </button>
@@ -476,6 +535,18 @@ function App() {
         id="shape-helper"
         onMouseUp={deleteOriginalCursorPosition}
       />
+      <svg
+        id="pencil-helper"
+        className="fixed inset-0 select-none"
+        style={{ display: "none" }}
+        width={window.innerWidth}
+        height={window.innerHeight}
+        xmlns="http://www.w3.org/2000/svg"
+        onMouseMove={drawFake}
+        onMouseUp={deleteOriginalCursorPosition}
+      >
+        <path d="" stroke={colorHslString} />
+      </svg>
     </>
   );
 }

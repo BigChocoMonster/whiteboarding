@@ -1,4 +1,4 @@
-import ellipse from "./ellipse.png";
+import { TbCircle } from "react-icons/tb";
 
 function Ellipse(props: {
   isSelected: boolean;
@@ -6,19 +6,15 @@ function Ellipse(props: {
   select: () => void;
 }) {
   return (
-    <>
-      <div
-        className={
-          "rounded cursor-pointer h-8 w-8 bg-contain" +
-          (props.isSelected ? " outline outline-2 outline-offset-2" : "")
-        }
-        style={{
-          outlineColor: props.selectionColor,
-          backgroundImage: `url("${ellipse}")`,
-        }}
-        onClick={props.select}
+    <button
+      className="rounded cursor-pointer p-1 hover:bg-slate-100"
+      onClick={props.select}
+    >
+      <TbCircle
+        size={32}
+        color={props.isSelected ? props.selectionColor : ""}
       />
-    </>
+    </button>
   );
 }
 

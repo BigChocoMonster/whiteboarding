@@ -1,6 +1,6 @@
 import { MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useDetectClickOutside } from "react-detect-click-outside";
-import { AiOutlineCopy } from "react-icons/ai";
+import { TbCircle, TbCopy } from "react-icons/tb";
 
 function Color(props: {
   selectedColor: { hue: number; saturation: number; lightness: number };
@@ -141,7 +141,7 @@ function Color(props: {
 
   const colorRef = useDetectClickOutside({
     onTriggered: (event) => {
-      const target = event.target as HTMLElement;
+      const target = event.currentTarget as HTMLElement;
       if (!target.id.endsWith("-trigger")) {
         toggleMenu(false);
       }
@@ -210,12 +210,9 @@ function Color(props: {
 
   return (
     <>
-      <div
+      <button
         id="color-trigger"
-        className="rounded-full border border-slate-300 cursor-pointer h-8 w-8"
-        style={{
-          backgroundColor: colorHslString,
-        }}
+        className="rounded cursor-pointer p-1 hover:bg-slate-100"
         onClick={() => {
           if (isMenuOpen) {
             toggleMenu(false);
@@ -223,7 +220,9 @@ function Color(props: {
             toggleMenu(true);
           }
         }}
-      />
+      >
+        <TbCircle size={32} color={colorHslString} fill={colorHslString} />
+      </button>
       {isMenuOpen ? (
         <div
           className="top-0 left-16 absolute rounded shadow p-4 bg-white flex flex-col gap-3"
@@ -277,7 +276,7 @@ function Color(props: {
           </section>
           <section className="flex items-center gap-2">
             <p>{hslToHex}</p>
-            <AiOutlineCopy
+            <TbCopy
               className="cursor-pointer"
               onClick={() => {
                 if (typeof navigator?.clipboard?.writeText === "function") {
@@ -289,6 +288,14 @@ function Color(props: {
                 }
               }}
             />
+            <p
+              className="ml-auto underline cursor-pointer"
+              onClick={() => {
+                toggleMenu(false);
+              }}
+            >
+              Close
+            </p>
           </section>
         </div>
       ) : null}

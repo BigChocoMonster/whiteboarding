@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { TbArrowBackUp, TbArrowForwardUp } from "react-icons/tb";
+import { AiOutlineClear } from "react-icons/ai";
 
 import Color from "./Color";
 import Rectangle from "./Rectangle";
@@ -58,7 +59,7 @@ function App() {
       | {
           type: "pencil";
           color: string;
-          details: typeof cursorPosition[];
+          details: (typeof cursorPosition)[];
         }
     )[]
   >([]);
@@ -111,7 +112,7 @@ function App() {
    * performs the actual painting on canvas depending
    * on the shape
    */
-  const draw = useCallback((shape: typeof shapes[number]) => {
+  const draw = useCallback((shape: (typeof shapes)[number]) => {
     if (contextRef.current) {
       contextRef.current.beginPath();
 
@@ -215,7 +216,7 @@ function App() {
    */
   const deleteOriginalCursorPosition = useCallback(() => {
     if (selectedShape !== "pencil") {
-      const newShape: typeof shapes[number] = {
+      const newShape: (typeof shapes)[number] = {
         type: selectedShape,
         color: colorHslString,
         details: {
@@ -244,7 +245,7 @@ function App() {
         helperTip.style.borderRadius = "unset";
       }
     } else {
-      const newShape: typeof shapes[number] = {
+      const newShape: (typeof shapes)[number] = {
         type: "pencil",
         color: colorHslString,
         details: pencilStates,
@@ -417,7 +418,7 @@ function App() {
          */
         setPoppedShapes((currentPoppedShapes) =>
           currentPoppedShapes.concat(
-            removedShape || ({} as typeof shapes[number])
+            removedShape || ({} as (typeof shapes)[number])
           )
         );
       }
@@ -444,7 +445,7 @@ function App() {
          */
         setShapes((currentShapes) => {
           redrawnShapes = currentShapes.concat(
-            reAddedShape || ({} as typeof shapes[number])
+            reAddedShape || ({} as (typeof shapes)[number])
           );
 
           drawEverything(redrawnShapes);
@@ -456,6 +457,15 @@ function App() {
       return clonedPoppedShapes;
     });
   }, [setShapes, setPoppedShapes, drawEverything]);
+
+  /**
+   * clearing out canvas for a fresh start
+   */
+  const clearCanvas = useCallback(() => {
+    const canvas = document.getElementById("board") as HTMLCanvasElement;
+    contextRef.current?.clearRect(0, 0, canvas.width, canvas.height);
+    setShapes([]);
+  }, []);
 
   return (
     <>
@@ -518,6 +528,9 @@ function App() {
               size={32}
               color={poppedShapes.length < 1 ? "rgb(100, 116, 139)" : ""}
             />
+          </button>
+          <button onClick={clearCanvas}>
+            <AiOutlineClear size={32} />
           </button>
         </div>
       </div>

@@ -1,4 +1,3 @@
-import pen from "./pen.png";
 import { TbPencil } from "react-icons/tb";
 
 function Pencil(props: {

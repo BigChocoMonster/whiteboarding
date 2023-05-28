@@ -14,13 +14,18 @@ import Rectangle from "./Rectangle";
 import Ellipse from "./Ellipse";
 import Line from "./Line";
 import Pencil from "./Pencil";
+import { saveShapesToMemory } from "./utils";
 
 let originalCursorPosition: { x: number; y: number };
 let cursorPosition: { x: number; y: number };
 
 let pencilStates: { x: number; y: number }[] = [];
 
-function App() {
+type Props = {
+  savedShapes: []
+}
+
+function App(props: Props) {
   const [selectedShape, setSelectedShape] = useState<
     "pencil" | "rectangle" | "ellipse" | "line"
   >("pencil");
@@ -62,7 +67,17 @@ function App() {
           details: (typeof cursorPosition)[];
         }
     )[]
-  >([]);
+  >(props.savedShapes);
+
+  /**
+   * Store the shape after each draw,
+   * to be retrieved later.
+   */
+  useEffect(() => {
+    saveShapesToMemory<typeof shapes>(shapes)
+  }, [shapes]);
+
+
 
   /**
    * maintaining popped states so that we can allow user to redo stuff
@@ -403,6 +418,14 @@ function App() {
     },
     [draw]
   );
+
+  /**
+   * Now draw the shapes, that are retreived from last session.
+   * We strictly needs to run it once.
+   */
+  useEffect(() => {
+    drawEverything(props.savedShapes);
+  }, [props.savedShapes, drawEverything]);
 
   const undoShape = useCallback(() => {
     let redrawnShapes: typeof shapes = [];
